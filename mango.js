@@ -2,7 +2,7 @@ var Lexer = require('./lexer')
 var Parser = require('./parser')
 //var Executor = require('executor')
 
-var code = 'var a = 1111 XOR 222 + 333 - new Date;';
+var code = 'var a = 1111 XOR 222 + 333 - new Date; if (1 == 1) { } else { var c = 1; }';
 
 var lexer = new Lexer(code);
 var lexems = [];
@@ -29,4 +29,4 @@ try {
     console.log(e);
 }
 
-console.log (commands);
+console.log (JSON.stringify(commands));

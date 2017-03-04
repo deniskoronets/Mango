@@ -15,16 +15,22 @@ Parser.prototype.ifParser = function() {
         type: 'if',
         condition: '',
         content: '',
+        elseContent: '',
     }
 
     this.expect('keyword', 'if')
+        .expect('operator', '(')
         .valueParser(function(cont) {
             result.condition = cont;
-
         })
         .expect('operator', ')')
         .bracketsParser(function(content) {
             result.content = new Parser(content).parse();
+        })
+        .expectIf('keyword', 'else', function() {
+            this.bracketsParser(function(content) {
+                result.elseContent = new Parser(content).parse();
+            })
         })
 
     this.commands.push(result);
@@ -54,6 +60,8 @@ Parser.prototype.bracketsParser = function(callback) {
         this.move();
     }
 
+    this.expect('operator', '}');
+
     return this;
 }
 
@@ -69,7 +77,7 @@ Parser.prototype.varParser = function() {
         .expect('alphanumeric', '*', function(cont) {
             result.name = cont;
         })
-        .expect('operator', ';')
+        .expect('operator', '=')
         .valueParser(function(cont) {
             result.content = cont;
         })
@@ -81,7 +89,7 @@ Parser.prototype.varParser = function() {
 Parser.prototype.valueParser = function(callback) {
     var result = [];
 
-    while (!this.eof(true) && [';', ')'].indexOf(this.current().content) !== -1) {
+    while (!this.eof(true) && [';', ')'].indexOf(this.current().content) === -1) {
         result.push(this.current());
         this.move();
     }
@@ -91,10 +99,33 @@ Parser.prototype.valueParser = function(callback) {
     return this;
 }
 
+Parser.prototype.expectIf = function(type, content, callback) {
+
+    if (this.eof()) {
+        return;
+    }
+
+    if (this.current().type != type) {
+        return;
+    }
+
+    if (content != '*' && this.current().content != content) {
+        return;
+    }
+
+    this.move();
+
+    if (callback) {
+        callback.call(this, this.current().content);
+    }
+
+    return this;
+}
+
 Parser.prototype.expect = function(type, content, callback) {
 
     if (this.current().type != type) {
-        throw {error: 'Unexpected type ' + this.current().type + '. Expected ' + type + ', value `' + this.current().content + '` on line ' + this.current().line};
+        throw {error: 'Unexpected type ' + this.current().type + '. Expected ' + type + ' - ' + content + ', value `' + this.current().content + '` on line ' + this.current().line};
     }
 
     if (content != '*' && this.current().content != content) {
